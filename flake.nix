@@ -1,45 +1,47 @@
 {
   outputs = { flake-utils, nixpkgs, ... }:
     flake-utils.lib.eachDefaultSystem (system:
-      let pkgs = import nixpkgs { inherit system; }; in rec {
-        packages.default = (pkgs.buildGoModule rec {
-          pname = "svelte-vite-go-nix";
-          version = "0.0.1";
-          src = ./.;
+      let
+        pkgs = import nixpkgs { inherit system; };
 
-          ##### fetch #####
+        name = "svelte-vite-go-nix";
+        version = "0.0.1";
+
+        frontend = pkgs.stdenv.mkDerivation rec {
+          pname = "${name}-frontend";
+          inherit version;
+          src = ./frontend;
 
           pnpmDeps = pkgs.pnpm.fetchDeps {
             inherit pname version src;
             hash = "sha256-OGn8kjlLEmadvLnkd24b2rNuczLdvrnbQaQSxoqL8XE=";
           };
 
-          vendorHash = "sha256-tbYafktlM84YLYZvhY2kaeYwlFrWGeFXGnKCEbpAYos=";
-
-          ##### build #####
-
           nativeBuildInputs = with pkgs; [
             nodejs
             pnpm.configHook
           ];
 
-          preBuild = "pnpm build";
+          buildPhase = "pnpm build";
+          installPhase = "cp -r dist $out";
+        };
+
+        backend = pkgs.buildGoModule {
+          pname = name;
+          inherit version;
+          src = ./backend;
+
+          vendorHash = "sha256-tbYafktlM84YLYZvhY2kaeYwlFrWGeFXGnKCEbpAYos=";
+
+          preBuild = "cp -r ${frontend} dist";
 
           CGO_ENABLED = "0";
           ldflags = [ "-s" "-w" ];
           tags = [ "prod" ];
-        }).overrideAttrs (old: {
-          passthru = old.passthru // {
-            overrideModAttrs = old: {
-              nativeBuildInputs =
-                pkgs.lib.remove
-                  pkgs.pnpm.configHook
-                  old.nativeBuildInputs;
-
-              preBuild = "";
-            };
-          };
-        });
+        };
+      in
+      rec {
+        packages.default = backend;
 
         devShells.default = pkgs.mkShell {
           inputsFrom = [ packages.default ];
