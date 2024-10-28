@@ -9,11 +9,8 @@ woah that's a lot of stuff!
 
 for development:
 #+begin_src shell
-  # run in one shell:
-  pnpm dev
-
-  # and in another:
-  air
+  nix shell # or use nix-direnv
+  dev       # runs vite & air
 #+end_src
 
 for production:

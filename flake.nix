@@ -39,14 +39,21 @@
           ldflags = [ "-s" "-w" ];
           tags = [ "prod" ];
         };
+
+        dev = pkgs.writeShellApplication {
+          name = "dev";
+          runtimeInputs = with pkgs; [ air runit ];
+          text = "runsvdir services";
+        };
       in
-      rec {
+      {
         packages.default = backend;
 
         devShells.default = pkgs.mkShell {
-          inputsFrom = [ packages.default ];
+          inputsFrom = [ frontend backend ];
+
           packages = with pkgs; [
-            air
+            dev
             svelte-language-server
           ];
         };
